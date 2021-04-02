@@ -6,6 +6,9 @@ import librosa.display
 from matplotlib import pyplot as plt
 from skimage.feature import peak_local_max
 from warnings import simplefilter
+import sqlite3
+import pdb
+import time
 
 def targetZonePoints(anchor, width, height, delayTime, peaks):
     # Initialize the adjacent points
@@ -23,41 +26,39 @@ def targetZonePoints(anchor, width, height, delayTime, peaks):
     return adjacents
 
 def hashing(anchor, width, height, delayTime, peaks, audioName):
-    "Create a matrix of peaks hashed as: [[freq_anchor, freq_other, delta_time], time_anchor, songID]"
-    hashingMatrix = np.zeros((len(peaks)*100, 4)) 
+    # Create a matrix of peaks hashed as: 
+    # Anchor frequency,	Adjacent points frequency, Time delta, Anchor time,	audioName"
+    hashingMatrix = []
     index = 0 
     for m in range(0,len(peaks)):
         anchor = peaks[m]
         adjacents = targetZonePoints(anchor, width, height, delayTime, peaks)
         for n in range(0,len(adjacents)):
-            # Store the pair of the anchor and the target zone point
-            hashingMatrix[index][0] = hash((anchor[m][1], adjacents[n][1]))
-            # Store the time difference between the anchor and the target zone point, i.e. delta_time
-            hashingMatrix[index][1] = adjacents[n][0]-anchor[m][0]
+            hashes = []
+            # Store the pair of the anchor and the target zone point, and their time difference as a hash
+            hashes.append(hash((anchor[1], adjacents[n][1], adjacents[n][0]-anchor[0])))
             # Store the time offset
-            hashingMatrix[index][2] = anchor[0]
+            hashes.append(anchor[0])
             # Store the name of the song
-            hashingMatrix[index][3] = audioName
+            hashes.append(audioName)
+            hashingMatrix.append(hashes)
             index=index+1
-    
-    # hashMatrix = hashMatrix[~np.all(hashMatrix==0,axis=1)]
-    # hashMatrix = np.sort(hashMatrix,axis=0)
-        
+
     return hashingMatrix
 
-def singleFingerprint(audioPath):
+def singleFingerprint(audioPath, filename, pathToFingerprints):
     # Load audio
     y, sr = librosa.load(os.path.join(audioPath))
 
     # --------- Use mel spectrogram for time-frequency representations ---------
 
     # Compute and plot mel spectrogram
-    S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=512, win_length=1024, window='hann', n_mels=128)
+    # S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=512, win_length=1024, window='hann', n_mels=128)
 
     # --------- Use STFT spectrogram for time-frequency representations ---------
 
     # # Compute and plot STFT spectrogram
-    # S = np.abs(librosa.stft(y,n_fft=1024,window='hann',win_length=1024,hop_length=512))
+    S = np.abs(librosa.stft(y,n_fft=1024,window='hann',win_length=1024,hop_length=512))
 
     # --------- Use CQT spectrogram for time-frequency representations ---------
 
@@ -65,54 +66,74 @@ def singleFingerprint(audioPath):
     # S = np.abs(librosa.cqt(y, sr=sr))
 
     # Plot spectrogram
-    # plt.figure(figsize=(100, 50))
+    # plt.figure(figsize=(10, 5))
     # librosa.display.specshow(librosa.amplitude_to_db(S,ref=np.max),y_axis='linear', x_axis='time',cmap='gray_r',sr=sr)
 
     # ignore all future warnings, particularly ignore that for peak_local_max
     simplefilter(action='ignore', category=FutureWarning)
     # Detect peaks from the spectrogram and plot constellation map
-    coordinates = peak_local_max(np.log(S, where=S > 0), min_distance=10,threshold_rel=0.05, indices = False)
+    coordinates = peak_local_max(np.log(S, where=S > 0), min_distance=10,threshold_rel=0.05)
+    plt.figure(figsize=(10, 5))
+    coordinates = np.array(coordinates)
+    plt.scatter(coordinates[:,0], coordinates[:,1])
+    # save the plotted constellation map graph as a figure
+    plot_filename = os.path.join(os.getcwd(), pathToFingerprints, filename)
+    plt.savefig(plot_filename)
+    # To prevent the runtimeWarning that more than 20 figures have been opened. 
+    plt.close()
+
     return coordinates
 
 def fingerprintBuilder(pathToDatabase, pathToFingerprints):
+    # Prepare to store the hashing matrix into database
+    # Create a Connection object that represents the database
+    con = sqlite3.connect('songdatabase.db')
+    cur = con.cursor()
+    # Create table
+    cur.execute('''CREATE TABLE IF NOT EXISTS hashingMatrix
+                (hashPair int, timeOffset real, audioName text)''')
+
     # Iterate the entire database and generate fingerprint for each of audio file
     for entry in os.scandir(pathToDatabase):
-        # Get all the peaks
-        coordinates = singleFingerprint(entry.path)
-        plt.figure(figsize=(10, 5))
-        plt.imshow(coordinates,cmap=plt.cm.binary,origin='lower')
-        # Simplify the audi file name
-        filename = "".join(entry.name[:-4].split("."))
-        # save the plotted spectrogram graph as a figure
-        plot_filename = os.path.join(os.getcwd(), pathToFingerprints, filename)
-        plt.savefig(plot_filename)
-        # To prevent the runtimeWarning that more than 20 figures have been opened. 
-        plt.close()
-        # Hash the points
-        width = 
-        height = 
-        delayTime = 
-        for anchor in coordinates:
-            hashingMatrix = hashing(anchor, width, height, delayTime, coordinates, entry.name)
-            print(hashingMatrix)
-        
-        # Store the hashing Matrix for each song
-        # TODO
+        if entry.name[-4:] == '.wav':
+            # Simplify the audi file name
+            filename = "".join(entry.name[:-4].split("."))
+            # Get all the peaks
+            coordinates = singleFingerprint(entry.path, filename, pathToFingerprints)
+            
+            # Hash the points
+            width = 5
+            height = 200
+            delayTime = 0.5
+            for anchor in coordinates:
+                hashingMatrix = hashing(anchor, width, height, delayTime, coordinates, entry.name)
+            
+            # Insert the matrix into the database
+            cur.executemany('''insert into hashingMatrix values (?, ?, ?)''', hashingMatrix)
+            # Save (commit) the changes
+            con.commit()
+    # Close the connection.
+    con.close()
 
     return None
 
-def audioIdentification(pathToQueryset, pathToFingerprints, pathToOutputtxt):
-    # Generate the fingerprints for all the queries
+def audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputtxt):
     for entry in os.scandir(pathToQueryset):
+        # Simplify the query audio file name
+        queryname = "".join(entry.name[:-4].split("."))
         # Get all the peaks
-        coordinates = singleFingerprint(entry.path)
-        plt.figure(figsize=(10, 5))
-        plt.imshow(coordinates,cmap=plt.cm.binary,origin='lower')
+        coordinates = singleFingerprint(entry.path, queryname, pathToQueryFingerprints)
+        
         # Compare fingerprints
 
     return None
 
 if __name__ == "__main__":
-    pathToDatabase = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/database_recordings'
-    pathToFingerprints = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/databaseFingerprints'
+    t0= time.clock()
+    
+    pathToDatabase = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/database_subset'
+    pathToFingerprints = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/databaseSubset_fingerprints'
     fingerprintBuilder(pathToDatabase, pathToFingerprints)
+
+    t1 = time.clock() - t0
+    print("Time elapsed: ", t1)
