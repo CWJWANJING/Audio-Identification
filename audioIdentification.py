@@ -19,11 +19,9 @@ def matches(hashingMatrix):
     hashvalues = [str(hm[0]) for hm in hashingMatrix]
     hashvalues = ",".join(hashvalues)
     hashvalues = "(" + hashvalues + ")"
-    print(hashvalues)
     # Extract all the rows of the table from the database which have the same hashvalue as this query song
     cur.execute(f"SELECT hashPair, timeOffset, audioName FROM hashingMatrix WHERE hashPair IN {hashvalues}")
     results = cur.fetchall()
-    print(results)
     hDict = {}
     for hashPair, timeOffset, _ in hashingMatrix:
         hDict[hashPair] = timeOffset
@@ -48,13 +46,11 @@ def top3matches(resultsDict):
         scoresNnames[score] = audioName
     if bool(scoresNnames) != False:
         # Find the top 1 match
-        print(scoresNnames.keys())
         maxscore = max(scoresNnames.keys())
         maxSongName = scoresNnames[maxscore]
         top3Names.append(maxSongName)
         # Find the top 2 match
         scoresNnames.pop(maxscore)
-        print(scoresNnames)
         # If the list is not empty
         if bool(scoresNnames) != False:
             maxscore = max(scoresNnames.keys())
@@ -79,31 +75,33 @@ def top3matches(resultsDict):
 
 
 
-def audioIdentification(pathToQueryset, pathToQueryFingerprints):
+def audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt, width, height, delayTime):
     outputLines = []
     for entry in os.scandir(pathToQueryset):
         if entry.name[-4:] == '.wav':
-            print(entry.name)
             # Simplify the query audio file name
             queryname = "".join(entry.name[:-4].split("."))
             # Get all the peaks
             coordinates, sr = singleFingerprint(entry.path, queryname, pathToQueryFingerprints)
             # Hash the points
-            hashingMatrix = hashing(coordinates, sr, entry.name)
+            hashingMatrix = hashing(coordinates, sr, entry.name, width, height, delayTime)
             # Find all the hash pairs that matches this song
             resultsDict = matches(hashingMatrix)
             # Get the top three choices
             top3Choices = top3matches(resultsDict)
             outputLine = entry.name + " " + " ".join(top3Choices)
             outputLines.append(outputLine)
-    with open('output.txt', 'w') as output:
+    with open(pathToOutputTxt, 'w') as output:
         for line in outputLines:
             output.write(line)
             output.write("\n")
     return None
 
 if __name__ == "__main__":
-
+    t0= time.perf_counter()
     pathToQueryset = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/query_subset'
     pathToQueryFingerprints = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/querySubset_fingerprints'
-    audioIdentification(pathToQueryset, pathToQueryFingerprints)
+    pathToOutputTxt = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/output.txt'
+    audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt)
+    t1 = time.perf_counter() - t0
+    print("Time elapsed: ", t1)

@@ -8,6 +8,7 @@ from warnings import simplefilter
 import sqlite3
 import pdb
 import time
+from scipy import ndimage
 
 def singleFingerprint(audioPath, filename, pathToFingerprints):
     # Load audio
@@ -35,10 +36,23 @@ def singleFingerprint(audioPath, filename, pathToFingerprints):
     # ignore all future warnings, particularly ignore that for peak_local_max
     simplefilter(action='ignore', category=FutureWarning)
     # Detect peaks from the spectrogram and plot constellation map
-    coordinates = peak_local_max(np.log(S, where=S > 0), min_distance=10,threshold_rel=0.05)
-    plt.figure(figsize=(10, 5))
-    coordinates = np.array(coordinates)
-    plt.scatter(coordinates[:,0], coordinates[:,1])
+    # --------- Use skimage.peak_local_max for peaks finding ---------
+    # coordinates = peak_local_max(np.log(S, where=S > 0), min_distance=10,threshold_rel=0.05)
+    # plt.figure(figsize=(10, 5))
+    # coordinates = np.array(coordinates)
+    # plt.scatter(coordinates[:,0], coordinates[:,1])
+
+    # --------- Use scipy.ndimage.maximum_filter for peaks finding ---------
+    peakData = ndimage.maximum_filter(np.log(S), size=30, mode="constant")
+    # Compare the found peaks with the original spectrogram
+    ''' Inspired by
+    <https://github.com/notexactlyawe/abracadabra/blob/0ad1b9c4f953e55e500416bebbb093e65adcf608/abracadabra/fingerprint.py>
+    '''
+    goodPeaks = (np.log(S) == peakData)
+    yPeaks, xPeaks = goodPeaks.nonzero()
+    plt.scatter(xPeaks, yPeaks)
+    coordinates = np.array(list(zip(yPeaks,xPeaks)))
+
     # save the plotted constellation map graph as a figure
     plot_filename = os.path.join(os.getcwd(), pathToFingerprints, filename)
     plt.savefig(plot_filename)
@@ -61,10 +75,10 @@ def targetZonePoints(anchor, width, height, delayTime, peaks):
             adjacents.append(p)
     return adjacents
 
-def hashing(peaks, sr, audioName):
-    width = 5
-    height = 200
-    delayTime = 0.5
+def hashing(peaks, sr, audioName, width, height, delayTime):
+    # width = 2
+    # height = 100
+    # delayTime = 0.2
     # Create a matrix of peaks hashed as: 
     # Anchor frequency,	Adjacent points frequency, Time delta, Anchor time,	audioName"
     hashingMatrix = []
@@ -83,7 +97,7 @@ def hashing(peaks, sr, audioName):
     return hashingMatrix
 
 
-def fingerprintBuilder(pathToDatabase, pathToFingerprints):
+def fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayTime):
     # Prepare to store the hashing matrix into database
     # Create a Connection object that represents the database
     con = sqlite3.connect('songdatabase.db')
@@ -100,7 +114,7 @@ def fingerprintBuilder(pathToDatabase, pathToFingerprints):
             # Get all the peaks
             coordinates, sr = singleFingerprint(entry.path, filename, pathToFingerprints)         
             # Hash the points
-            hashingMatrix = hashing(coordinates, sr, entry.name)
+            hashingMatrix = hashing(coordinates, sr, entry.name, width, height, delayTime)
             # Insert the matrix into the database
             cur.executemany('''insert into hashingMatrix values (?, ?, ?)''', hashingMatrix)
             # Save (commit) the changes
@@ -110,11 +124,11 @@ def fingerprintBuilder(pathToDatabase, pathToFingerprints):
     return None
 
 if __name__ == "__main__":
-    t0= time.clock()
+    t0= time.perf_counter()
     
     pathToDatabase = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/database_subset'
     pathToFingerprints = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/databaseSubset_fingerprints'
     fingerprintBuilder(pathToDatabase, pathToFingerprints)
 
-    t1 = time.clock() - t0
+    t1 = time.perf_counter() - t0
     print("Time elapsed: ", t1)
