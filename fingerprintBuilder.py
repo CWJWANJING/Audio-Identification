@@ -51,7 +51,7 @@ def singleFingerprint(audioPath, filename, pathToFingerprints):
     goodPeaks = (np.log(S) == peakData)
     yPeaks, xPeaks = goodPeaks.nonzero()
     plt.scatter(xPeaks, yPeaks)
-    coordinates = np.array(list(zip(yPeaks,xPeaks)))
+    coordinates = np.array(list(zip(xPeaks,yPeaks)))
 
     # save the plotted constellation map graph as a figure
     plot_filename = os.path.join(os.getcwd(), pathToFingerprints, filename)
@@ -125,10 +125,13 @@ def fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayT
 
 if __name__ == "__main__":
     t0= time.perf_counter()
+    width = 1.8
+    height = 400
+    delayTime = 0.2
     
-    pathToDatabase = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/database_subset'
-    pathToFingerprints = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/databaseSubset_fingerprints'
-    fingerprintBuilder(pathToDatabase, pathToFingerprints)
+    pathToDatabase = 'database_subset'
+    pathToFingerprints = 'databaseSubset_fingerprints'
+    fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayTime)
 
     t1 = time.perf_counter() - t0
     print("Time elapsed: ", t1)

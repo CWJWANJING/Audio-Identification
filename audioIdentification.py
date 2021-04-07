@@ -99,9 +99,13 @@ def audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt
 
 if __name__ == "__main__":
     t0= time.perf_counter()
-    pathToQueryset = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/query_subset'
-    pathToQueryFingerprints = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/querySubset_fingerprints'
-    pathToOutputTxt = '/Users/wanjing/Desktop/MSc_AI/semB/MI/cw2/output.txt'
-    audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt)
+    width = 1.8
+    height = 400
+    delayTime = 0.2
+
+    pathToQueryset = 'query_subset'
+    pathToQueryFingerprints = 'querySubset_fingerprints'
+    pathToOutputTxt = 'output.txt'
+    audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt, width, height, delayTime)
     t1 = time.perf_counter() - t0
     print("Time elapsed: ", t1)
