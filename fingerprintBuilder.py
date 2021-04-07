@@ -35,6 +35,7 @@ def singleFingerprint(audioPath, filename, pathToFingerprints):
 
     # ignore all future warnings, particularly ignore that for peak_local_max
     simplefilter(action='ignore', category=FutureWarning)
+
     # Detect peaks from the spectrogram and plot constellation map
     # --------- Use skimage.peak_local_max for peaks finding ---------
     # coordinates = peak_local_max(np.log(S, where=S > 0), min_distance=10,threshold_rel=0.05)
@@ -44,10 +45,10 @@ def singleFingerprint(audioPath, filename, pathToFingerprints):
 
     # --------- Use scipy.ndimage.maximum_filter for peaks finding ---------
     peakData = ndimage.maximum_filter(np.log(S), size=30, mode="constant")
-    # Compare the found peaks with the original spectrogram
-    ''' Inspired by
+    '''Inspired by
     <https://github.com/notexactlyawe/abracadabra/blob/0ad1b9c4f953e55e500416bebbb093e65adcf608/abracadabra/fingerprint.py>
     '''
+    # Compare the found peaks with the original spectrogram
     goodPeaks = (np.log(S) == peakData)
     yPeaks, xPeaks = goodPeaks.nonzero()
     plt.scatter(xPeaks, yPeaks)
@@ -76,9 +77,6 @@ def targetZonePoints(anchor, width, height, delayTime, peaks):
     return adjacents
 
 def hashing(peaks, sr, audioName, width, height, delayTime):
-    # width = 2
-    # height = 100
-    # delayTime = 0.2
     # Create a matrix of peaks hashed as: 
     # Anchor frequency,	Adjacent points frequency, Time delta, Anchor time,	audioName"
     hashingMatrix = []
@@ -125,6 +123,7 @@ def fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayT
 
 if __name__ == "__main__":
     t0= time.perf_counter()
+    # Set the parameters of the target zone
     width = 1.8
     height = 400
     delayTime = 0.2

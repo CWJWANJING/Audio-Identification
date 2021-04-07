@@ -25,6 +25,7 @@ def matches(hashingMatrix):
     hDict = {}
     for hashPair, timeOffset, _ in hashingMatrix:
         hDict[hashPair] = timeOffset
+    # The dicitionary stores in this format: {audioName: [(timeOffset, hDict[hashPair]), ...}
     resultsDict = defaultdict(list)
     for r in results:
         resultsDict[r[2]].append((r[1], hDict[r[0]]))
@@ -33,8 +34,10 @@ def matches(hashingMatrix):
 def scoreAsong(timeOffset):
     binWidth = 0.5
     timeDeltas = []
+    # Calculate the time differences
     for t in timeOffset:
         timeDeltas.append(t[0] - t[1])
+    # Plot it to the histogram
     hist, _ = np.histogram(timeDeltas, bins=np.arange(int(min(timeDeltas)), int(max(timeDeltas))+binWidth+1, binWidth))
     return np.max(hist)
 
@@ -91,6 +94,7 @@ def audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt
             top3Choices = top3matches(resultsDict)
             outputLine = entry.name + " " + " ".join(top3Choices)
             outputLines.append(outputLine)
+    # Store the results in the txt file
     with open(pathToOutputTxt, 'w') as output:
         for line in outputLines:
             output.write(line)
@@ -99,6 +103,7 @@ def audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt
 
 if __name__ == "__main__":
     t0= time.perf_counter()
+    # Set the parameters for the target zone
     width = 1.8
     height = 400
     delayTime = 0.2
