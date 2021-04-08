@@ -44,7 +44,7 @@ def singleFingerprint(audioPath, filename, pathToFingerprints):
     # plt.scatter(coordinates[:,0], coordinates[:,1])
 
     # --------- Use scipy.ndimage.maximum_filter for peaks finding ---------
-    peakData = ndimage.maximum_filter(np.log(S), size=30, mode="constant")
+    peakData = ndimage.maximum_filter(np.log(S, where=S > 0), size=30, mode="constant")
     '''Inspired by
     <https://github.com/notexactlyawe/abracadabra/blob/0ad1b9c4f953e55e500416bebbb093e65adcf608/abracadabra/fingerprint.py>
     '''
@@ -55,10 +55,10 @@ def singleFingerprint(audioPath, filename, pathToFingerprints):
     coordinates = np.array(list(zip(xPeaks,yPeaks)))
 
     # save the plotted constellation map graph as a figure
-    plot_filename = os.path.join(os.getcwd(), pathToFingerprints, filename)
-    plt.savefig(plot_filename)
+    # plot_filename = os.path.join(os.getcwd(), pathToFingerprints, filename)
+    # plt.savefig(plot_filename)
     # To prevent the runtimeWarning that more than 20 figures have been opened. 
-    plt.close()
+    # plt.close()
     return coordinates, sr
 
 def targetZonePoints(anchor, width, height, delayTime, peaks):
@@ -128,8 +128,8 @@ if __name__ == "__main__":
     height = 400
     delayTime = 0.2
     
-    pathToDatabase = 'database_subset'
-    pathToFingerprints = 'databaseSubset_fingerprints'
+    pathToDatabase = 'database_recordings'
+    pathToFingerprints = 'database_fingerprints'
     fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayTime)
 
     t1 = time.perf_counter() - t0

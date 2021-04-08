@@ -108,8 +108,8 @@ if __name__ == "__main__":
     height = 400
     delayTime = 0.2
 
-    pathToQueryset = 'query_subset'
-    pathToQueryFingerprints = 'querySubset_fingerprints'
+    pathToQueryset = 'query_recordings'
+    pathToQueryFingerprints = 'query_fingerprints'
     pathToOutputTxt = 'output.txt'
     audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt, width, height, delayTime)
     t1 = time.perf_counter() - t0

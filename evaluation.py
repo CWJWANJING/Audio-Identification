@@ -4,7 +4,7 @@ import itertools
 import csv
 
 # The list is in the format of [[width, width,...],[height, height,...],[delayTime, delayTime,...]]
-parameters = [[2.4, 2.6, 2.8, 3.0, 3.2], [200, 400, 600, 800, 1000], [0.1, 0.2, 0.4, 0.6, 0.8]]
+parameters = [[2.4, 2.6, 2.8, 3.0, 3.2], [600, 800, 1000], [0.1, 0.2, 0.4, 0.6, 0.8]]
 
 combinations = list(itertools.product(*parameters))
 
@@ -58,10 +58,6 @@ with open('resultfile.csv', mode='w') as resultfile:
         print(settingNresults)
         # Write the results into a table
         resultwriter.writerow(settingNresults)
-        # remove songdatabase.db 
+        # remove songdatabase.db
         os.remove('songdatabase.db')
         # print("Time elapsed: ", t1)
-        
-
-
-    
