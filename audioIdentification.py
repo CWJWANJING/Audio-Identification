@@ -11,9 +11,9 @@ import time
 from collections import defaultdict
 from fingerprintBuilder import singleFingerprint, hashing, targetZonePoints
 
-def matches(hashingMatrix):
+def matches(hashingMatrix, pathToFingerprints):
     # Connect to the existing database
-    con = sqlite3.connect('songdatabase.db')
+    con = sqlite3.connect(pathToFingerprints)
     cur = con.cursor()
     # Put all the unique hash values into a list
     hashvalues = [str(hm[0]) for hm in hashingMatrix]
@@ -78,18 +78,19 @@ def top3matches(resultsDict):
 
 
 
-def audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt, width, height, delayTime):
+def audioIdentification(pathToQueryset, pathToFingerprints,
+                        pathToOutputTxt, width=3, height=800, delayTime=0.1):
     outputLines = []
     for entry in os.scandir(pathToQueryset):
         if entry.name[-4:] == '.wav':
             # Simplify the query audio file name
             queryname = "".join(entry.name[:-4].split("."))
             # Get all the peaks
-            coordinates, sr = singleFingerprint(entry.path, queryname, pathToQueryFingerprints)
+            coordinates, sr = singleFingerprint(entry.path, queryname)
             # Hash the points
             hashingMatrix = hashing(coordinates, sr, entry.name, width, height, delayTime)
             # Find all the hash pairs that matches this song
-            resultsDict = matches(hashingMatrix)
+            resultsDict = matches(hashingMatrix, pathToFingerprints)
             # Get the top three choices
             top3Choices = top3matches(resultsDict)
             outputLine = entry.name + " " + " ".join(top3Choices)
@@ -104,13 +105,15 @@ def audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt
 if __name__ == "__main__":
     t0= time.perf_counter()
     # Set the parameters for the target zone
-    width = 1.8
-    height = 400
-    delayTime = 0.2
+    width = 3
+    height = 800
+    delayTime = 0.1
 
     pathToQueryset = 'query_recordings'
-    pathToQueryFingerprints = 'query_fingerprints'
+    pathToFingerprints = 'songdatabase.db'
     pathToOutputTxt = 'output.txt'
-    audioIdentification(pathToQueryset, pathToQueryFingerprints, pathToOutputTxt, width, height, delayTime)
+    audioIdentification(pathToQueryset, pathToFingerprints,
+                        pathToOutputTxt, width=width, height=height,
+                        delayTime=delayTime)
     t1 = time.perf_counter() - t0
     print("Time elapsed: ", t1)

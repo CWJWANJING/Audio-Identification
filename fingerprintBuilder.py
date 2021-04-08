@@ -10,7 +10,7 @@ import pdb
 import time
 from scipy import ndimage
 
-def singleFingerprint(audioPath, filename, pathToFingerprints):
+def singleFingerprint(audioPath, filename):
     # Load audio
     y, sr = librosa.load(os.path.join(audioPath))
 
@@ -57,7 +57,7 @@ def singleFingerprint(audioPath, filename, pathToFingerprints):
     # save the plotted constellation map graph as a figure
     # plot_filename = os.path.join(os.getcwd(), pathToFingerprints, filename)
     # plt.savefig(plot_filename)
-    # To prevent the runtimeWarning that more than 20 figures have been opened. 
+    # To prevent the runtimeWarning that more than 20 figures have been opened.
     # plt.close()
     return coordinates, sr
 
@@ -77,7 +77,7 @@ def targetZonePoints(anchor, width, height, delayTime, peaks):
     return adjacents
 
 def hashing(peaks, sr, audioName, width, height, delayTime):
-    # Create a matrix of peaks hashed as: 
+    # Create a matrix of peaks hashed as:
     # Anchor frequency,	Adjacent points frequency, Time delta, Anchor time,	audioName"
     hashingMatrix = []
     for m in range(0,len(peaks)):
@@ -95,10 +95,10 @@ def hashing(peaks, sr, audioName, width, height, delayTime):
     return hashingMatrix
 
 
-def fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayTime):
+def fingerprintBuilder(pathToDatabase, pathToFingerprints, width=3, height=800, delayTime=0.1):
     # Prepare to store the hashing matrix into database
     # Create a Connection object that represents the database
-    con = sqlite3.connect('songdatabase.db')
+    con = sqlite3.connect(pathToFingerprints)
     cur = con.cursor()
     # Create table
     cur.execute('''CREATE TABLE IF NOT EXISTS hashingMatrix
@@ -110,7 +110,7 @@ def fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayT
             # Simplify the audi file name
             filename = "".join(entry.name[:-4].split("."))
             # Get all the peaks
-            coordinates, sr = singleFingerprint(entry.path, filename, pathToFingerprints)         
+            coordinates, sr = singleFingerprint(entry.path, filename)
             # Hash the points
             hashingMatrix = hashing(coordinates, sr, entry.name, width, height, delayTime)
             # Insert the matrix into the database
@@ -124,13 +124,14 @@ def fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayT
 if __name__ == "__main__":
     t0= time.perf_counter()
     # Set the parameters of the target zone
-    width = 1.8
-    height = 400
-    delayTime = 0.2
-    
+    width = 3
+    height = 800
+    delayTime = 0.1
+
     pathToDatabase = 'database_recordings'
-    pathToFingerprints = 'database_fingerprints'
-    fingerprintBuilder(pathToDatabase, pathToFingerprints, width, height, delayTime)
+    pathToFingerprints = 'songdatabase.db'
+    fingerprintBuilder(pathToDatabase, pathToFingerprints,
+                       width=width, height=height, delayTime=delayTime)
 
     t1 = time.perf_counter() - t0
     print("Time elapsed: ", t1)
